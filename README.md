@@ -1,2 +1,2 @@
 # go-cloud-native
-a cloud native implemented in Go.
+A cloud native platform implemented in Go.
