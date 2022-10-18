@@ -43,7 +43,6 @@ var (
 	hystrixPort = 9092
 
 	// 服务监控
-	prometheusHost = hostIp
 	prometheusPort = 9192
 )
 
@@ -108,11 +107,14 @@ func main() {
 	// 3) 启动 filebeat，命令： ./filebeat -e -c filebeat.yml
 	commom.Info("test elk ")
 
+	// 添加监控中心
+	commom.PrometheusBoot(prometheusPort)
+
 	// 创建服务
 	service := micro.NewService(
 		micro.Name("base"),
 		micro.Version("v1"),
-		micro.Registry(consulCluster), // 添加注册中心
+		micro.Registry(consulCluster),                                                 // 添加注册中心
 		micro.WrapHandler(opentracing2.NewHandlerWrapper(opentracing.GlobalTracer())), // 添加链路追踪 —— 服务端模式
 		micro.WrapClient(opentracing2.NewClientWrapper(opentracing.GlobalTracer())),   // 添加链路追踪 —— 客户端模式
 		micro.WrapClient(hystrix2.NewClientHystrixWrapper()),                          // 添加熔断降级 —— 只作为客户端的时候起作用

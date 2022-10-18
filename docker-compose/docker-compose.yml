@@ -48,3 +48,15 @@ services:
     image: cap1573/hystrix-dashboard
     ports:
       - "9002:9002"
+  # 监控中心
+  prometheus:
+    image: cap1573/prometheus
+    volumes:
+      - "./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+  # 监控看板，默认密码 admin/admin
+  grafana:
+    image: cap1573/grafana
+    ports:
+      - "3000:3000"

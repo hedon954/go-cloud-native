@@ -3,7 +3,7 @@ module base
 go 1.16
 
 require (
-	git.imooc.com/hedonwang/commom v0.0.0-20221018044058-3f0bef969ae1
+	git.imooc.com/hedonwang/commom v0.0.0-20221018081858-b953b20d1432
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2 // indirect
 	github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5
 	github.com/asim/go-micro/plugins/registry/consul/v3 v3.7.0
