@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	opentracing2 "github.com/asim/go-micro/plugins/wrapper/trace/opentracing/v3"
+	"github.com/opentracing/opentracing-go"
 	"strconv"
 
 	"git.imooc.com/hedonwang/commom"
@@ -16,6 +18,7 @@ import (
 var (
 	hostIp = "localhost" // 主机地址
 
+	serviceName = "base" // 服务名称
 	serviceHost = hostIp // 服务地址
 	servicePort = "8081" // 服务端口
 
@@ -64,11 +67,21 @@ func main() {
 	// 禁止表复数形式：user 不会自动转为 users，而是保留 user
 	db.SingularTable(true)
 
+	// 添加链路追踪
+	tracer, closer, err := commom.NewTracer(serviceName, fmt.Sprintf("%s:%d", tracerHost, tracerPort))
+	if err != nil {
+		panic(err)
+	}
+	defer closer.Close()
+	opentracing.SetGlobalTracer(tracer)
+
 	// 创建服务
 	service := micro.NewService(
 		micro.Name("base"),
 		micro.Version("v1"),
-		micro.Registry(consulCluster),
+		micro.Registry(consulCluster), // 添加注册中心
+		micro.WrapHandler(opentracing2.NewHandlerWrapper(opentracing.GlobalTracer())), // 添加链路追踪 —— 接口模式
+		micro.WrapClient(opentracing2.NewClientWrapper(opentracing.GlobalTracer())),   // 添加链路追踪 —— 客户端模式
 	)
 
 	// 初始化服务

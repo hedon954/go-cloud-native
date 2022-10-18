@@ -37,3 +37,9 @@ services:
       - "3307:3306"
     volumes:
       - "./mysql:/var/lib/mysql"
+  # 分布式链路追踪
+  jaeger:
+    image: cap1573/jaeger
+    ports:
+      - "6831:6831/udp"
+      - "16686:16686"
