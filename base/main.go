@@ -2,16 +2,24 @@ package main
 
 import (
 	"fmt"
-	opentracing2 "github.com/asim/go-micro/plugins/wrapper/trace/opentracing/v3"
-	"github.com/opentracing/opentracing-go"
+
+	"net"
+	"net/http"
 	"strconv"
 
 	"git.imooc.com/hedonwang/commom"
 
+	"github.com/afex/hystrix-go/hystrix"
 	"github.com/asim/go-micro/plugins/registry/consul/v3"
 	"github.com/asim/go-micro/v3"
 	"github.com/asim/go-micro/v3/registry"
 	"github.com/jinzhu/gorm"
+	"github.com/opentracing/opentracing-go"
+
+	hystrix2 "base/plugin/hystrix"
+	ratelimit "github.com/asim/go-micro/plugins/wrapper/ratelimiter/uber/v3"
+	opentracing2 "github.com/asim/go-micro/plugins/wrapper/trace/opentracing/v3"
+
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
@@ -30,9 +38,13 @@ var (
 	tracerHost = hostIp
 	tracerPort = 6831
 
-	//hystrixPort = 9092   // 熔断端口，每个服务不能重复
+	// 熔断降级
+	hystrixHost = "0.0.0.0"
+	hystrixPort = 9092
 
-	prometheusPort = 9192 // 监控端口，每个服务不能重复
+	// 服务监控
+	prometheusHost = hostIp
+	prometheusPort = 9192
 )
 
 func main() {
@@ -75,13 +87,30 @@ func main() {
 	defer closer.Close()
 	opentracing.SetGlobalTracer(tracer)
 
+	// 添加熔断器
+	hystrixStreamHandler := hystrix.NewStreamHandler()
+	hystrixStreamHandler.Start()
+	defer hystrixStreamHandler.Stop()
+
+	// 启动熔断监听程序
+	go func() {
+		// http://192.168.1.108:9092/turbine/turbine.stream
+		// 看板地址：http://localhost:9002/hystrix
+		err = http.ListenAndServe(net.JoinHostPort(hystrixHost, strconv.Itoa(hystrixPort)), hystrixStreamHandler)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
 	// 创建服务
 	service := micro.NewService(
 		micro.Name("base"),
 		micro.Version("v1"),
-		micro.Registry(consulCluster), // 添加注册中心
-		micro.WrapHandler(opentracing2.NewHandlerWrapper(opentracing.GlobalTracer())), // 添加链路追踪 —— 接口模式
+		micro.Registry(consulCluster),                                                 // 添加注册中心
+		micro.WrapHandler(opentracing2.NewHandlerWrapper(opentracing.GlobalTracer())), // 添加链路追踪 —— 服务端模式
 		micro.WrapClient(opentracing2.NewClientWrapper(opentracing.GlobalTracer())),   // 添加链路追踪 —— 客户端模式
+		micro.WrapClient(hystrix2.NewClientHystrixWrapper()),                          // 添加熔断降级 —— 只作为客户端的时候起作用
+		micro.WrapHandler(ratelimit.NewHandlerWrapper(1000)),                          // 添加限流：服务端模式
 	)
 
 	// 初始化服务
