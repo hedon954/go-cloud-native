@@ -1,12 +1,15 @@
 package main
 
 import (
-	"git.imooc.com/hedonwang/commom"
+	"fmt"
 	"strconv"
+
+	"git.imooc.com/hedonwang/commom"
 
 	"github.com/asim/go-micro/plugins/registry/consul/v3"
 	"github.com/asim/go-micro/v3"
 	"github.com/asim/go-micro/v3/registry"
+	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
@@ -40,11 +43,26 @@ func main() {
 	})
 
 	// 配置中心
-	_, err := commom.GetConsulConfig(consulHost, consulPort, "/micro/config")
+	consulConfig, err := commom.GetConsulConfig(consulHost, consulPort, "/micro/config")
 	if err != nil {
 		panic(err)
 	}
-	//fmt.Println(consulConfig)
+
+	// 使用配置中心连接 MySQL
+	mysqlConfig, err := commom.GetMySQLFromConsul(consulConfig, "mysql")
+	db, err := gorm.Open("mysql",
+		fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8&parseTime=True&loc=Local",
+			mysqlConfig.User,
+			mysqlConfig.Pwd,
+			mysqlConfig.Host,
+			mysqlConfig.Port,
+			mysqlConfig.Database,
+		))
+	if err != nil {
+		panic(err)
+	}
+	// 禁止表复数形式：user 不会自动转为 users，而是保留 user
+	db.SingularTable(true)
 
 	// 创建服务
 	service := micro.NewService(
@@ -57,7 +75,7 @@ func main() {
 	service.Init()
 
 	// 启动服务
-	if err := service.Run(); err != nil {
+	if err = service.Run(); err != nil {
 		panic(err)
 	}
 }

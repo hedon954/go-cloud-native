@@ -27,3 +27,13 @@ services:
     depends_on:
       - consul2
       - consul3
+  # 数据库
+  paas-mysql:
+    image: cap1573/mysql:5.6
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456
+      container_name: paas-mysql
+    ports:
+      - "3307:3306"
+    volumes:
+      - "./mysql:/var/lib/mysql"
