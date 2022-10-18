@@ -1,0 +1,1 @@
+{"level":"panic","ts":"2022-10-18T12:49:05.666+0800","caller":"base/main.go:63","msg":"error loading source consul: Get \"http://localhost:8500/v1/kv/micro/config?recurse=\": dial tcp [::1]:8500: connect: connection refused"}

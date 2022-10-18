@@ -60,7 +60,7 @@ func main() {
 	// 配置中心
 	consulConfig, err := commom.GetConsulConfig(consulHost, consulPort, "/micro/config")
 	if err != nil {
-		panic(err)
+		commom.Panic(err)
 	}
 
 	// 使用配置中心连接 MySQL
@@ -74,7 +74,7 @@ func main() {
 			mysqlConfig.Database,
 		))
 	if err != nil {
-		panic(err)
+		commom.Panic(err)
 	}
 	// 禁止表复数形式：user 不会自动转为 users，而是保留 user
 	db.SingularTable(true)
@@ -82,7 +82,7 @@ func main() {
 	// 添加链路追踪
 	tracer, closer, err := commom.NewTracer(serviceName, fmt.Sprintf("%s:%d", tracerHost, tracerPort))
 	if err != nil {
-		panic(err)
+		commom.Panic(err)
 	}
 	defer closer.Close()
 	opentracing.SetGlobalTracer(tracer)
@@ -98,15 +98,21 @@ func main() {
 		// 看板地址：http://localhost:9002/hystrix
 		err = http.ListenAndServe(net.JoinHostPort(hystrixHost, strconv.Itoa(hystrixPort)), hystrixStreamHandler)
 		if err != nil {
-			panic(err)
+			commom.Panic(err)
 		}
 	}()
+
+	// 添加日志中心
+	// 1) 程序日志打入日志文件中
+	// 2) 在程序中添加 filebeat.yml 文件
+	// 3) 启动 filebeat，命令： ./filebeat -e -c filebeat.yml
+	commom.Info("test elk ")
 
 	// 创建服务
 	service := micro.NewService(
 		micro.Name("base"),
 		micro.Version("v1"),
-		micro.Registry(consulCluster),                                                 // 添加注册中心
+		micro.Registry(consulCluster), // 添加注册中心
 		micro.WrapHandler(opentracing2.NewHandlerWrapper(opentracing.GlobalTracer())), // 添加链路追踪 —— 服务端模式
 		micro.WrapClient(opentracing2.NewClientWrapper(opentracing.GlobalTracer())),   // 添加链路追踪 —— 客户端模式
 		micro.WrapClient(hystrix2.NewClientHystrixWrapper()),                          // 添加熔断降级 —— 只作为客户端的时候起作用
@@ -118,6 +124,6 @@ func main() {
 
 	// 启动服务
 	if err = service.Run(); err != nil {
-		panic(err)
+		commom.Panic(err)
 	}
 }
